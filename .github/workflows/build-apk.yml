@@ -10,7 +10,13 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
+
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_NDK_VERSION: 26.1.10909125
+      GRADLE_VERSION: 8.9
 
     steps:
       - name: Checkout
@@ -27,28 +33,51 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android platform and NDK
+      # 关键：不依赖 sdkmanager 的交互式确认。
+      # ubuntu-latest 镜像已自带 Android SDK，这里只补许可证文件 + 需要的组件，
+      # 彻底绕开 android-actions/setup-android 里 sdkmanager --licenses 的交互等待。
+      - name: Pre-accept Android SDK licenses
         run: |
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager --install "platforms;android-36" > /dev/null 2>&1 || true
-          sdkmanager --install "build-tools;36.0.0" > /dev/null 2>&1 || true
-          sdkmanager --install "ndk;26.1.10909125" > /dev/null 2>&1 || true
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+          set -e
+          mkdir -p "$ANDROID_HOME/licenses"
+          cd "$ANDROID_HOME/licenses"
+          printf '\n24333f8a63b6825ea9c5514f83c2829b004d1eee\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n' > android-sdk-license
+          printf '\n84831b9409646a918e30573bab4c9c91346d8abd\n' > android-sdk-preview-license
+          printf '\n601085b94cd77f0b54ff86406957099ebe79c4d6\n' > android-googletv-license
+          printf '\n859f317696f67ef3d7f30a50a55675e7831c7e5c\n' > android-sdk-arm-dbt-license
+          printf '\n33b6a2b64607f11b759f320ef9dff4ae5c47d97\n' > google-gdk-license
+          printf '\ne9acab5b5fbb560a72cfaecce8946896ff6aab9d\n' > intel-android-extra-license
+          ls -1 "$ANDROID_HOME/licenses"
+
+      - name: Install Android SDK components
+        run: |
+          set -e
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          sdkmanager --version
+
+          # 双保险：万一上面的 hash 有未命中的，用 yes 自动应答，并加超时避免卡死
+          yes 2>/dev/null | timeout 600 sdkmanager --licenses > /dev/null 2>&1 || true
+
+          sdkmanager --install "platforms;android-35"
+          sdkmanager --install "build-tools;35.0.0"
+          sdkmanager --install "platform-tools"
+          sdkmanager --install "ndk;$ANDROID_NDK_VERSION"
+
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$ANDROID_NDK_VERSION" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/$ANDROID_NDK_VERSION" >> "$GITHUB_ENV"
 
       - name: Install Gradle
         run: |
-          curl -sL -o /tmp/gradle.zip https://services.gradle.org/distributions/gradle-8.9-bin.zip
+          curl -sL -o /tmp/gradle.zip "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip"
           unzip -q /tmp/gradle.zip -d /opt
-          echo "/opt/gradle-8.9/bin" >> $GITHUB_PATH
+          echo "/opt/gradle-${GRADLE_VERSION}/bin" >> "$GITHUB_PATH"
 
       - name: Install gomobile
         run: |
           go install golang.org/x/mobile/cmd/gomobile@latest
           go install golang.org/x/mobile/cmd/gobind@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: gomobile init
         run: gomobile init
@@ -62,7 +91,7 @@ jobs:
         run: gomobile bind -target=android -androidapi 24 -o ../app/libs/gopeed-core.aar .
 
       - name: Build debug APK
-        run: gradle assembleDebug --no-daemon
+        run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

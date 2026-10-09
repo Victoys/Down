@@ -61,3 +61,23 @@ Android 侧通过本地 HTTP 调 `/api/v1/tasks` 等接口创建和查询任务�
   首次 Actions 若报编译错，按日志里的行号微调即可（`core/mobile.go` 是最可能需要随 gopeed 版本调整的地方）。
 - 冷门 BT 资源速度取决于做种节点热度，开源下载器没有迅雷的离线服务器，直链下载才能跑满带宽。
 - 核心启动需要几秒，刚打开 App 时状态栏会显示"正在启动下载核心…"。
+
+## 关于 Android 16
+
+当前配置是 `compileSdk 35 / targetSdk 35`，这是 AGP 8.7.3 最稳妥的组合，
+在 Android 16 设备上正常运行，也满足 Google Play 对 targetSdk 的要求。
+
+如果你一定要 `targetSdk 36`，需要同时升级构建链（AGP、Gradle、Kotlin 一起动）：
+- `app/build.gradle`：`compileSdk 36`、`targetSdk 36`
+- 根 `build.gradle`：AGP 升到 8.10+，Kotlin 插件相应升级
+- workflow：`GRADLE_VERSION` 与 `platforms;android-36`、`build-tools;36.0.0`
+
+## 构建卡在 SDK 许可证确认？
+
+日志里出现 `7 of 8 SDK package licenses not accepted` / `Accept? (y/N)` 是
+`sdkmanager --licenses` 在等人工输入。本仓库的 workflow 已用两步规避：
+1. 预先写入 `$ANDROID_HOME/licenses/` 下的许可证文件
+2. `yes | timeout 600 sdkmanager --licenses` 兜底
+
+因此没有使用 `android-actions/setup-android`，那个 action 会自己调一次
+`sdkmanager --licenses`，在部分镜像上会卡住。
