@@ -95,7 +95,7 @@ jobs:
 
       - name: Build Go core AAR
         working-directory: core
-        run: gomobile bind -target=android -androidapi 24 -o ../app/libs/gopeed-core.aar . -v
+        run: gomobile bind -target=android -androidapi 24 -o ../app/libs/gopeed-core.aar .
 
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon --stacktrace

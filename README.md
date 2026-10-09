@@ -95,3 +95,12 @@ go mod tidy
 ```
 
 本仓库的 workflow 已经包含这两步。若你本地构建，手动执行上面命令即可。
+
+## 构建报 `no exported names in the package "-v"`？
+
+`gomobile bind` 不支持 `-v` 参数，它会把 `-v` 当成**要打包的包名**去解析，
+于是报出这个莫名其妙的错。去掉 `-v` 即可：
+
+```bash
+gomobile bind -target=android -androidapi 24 -o ../app/libs/gopeed-core.aar .
+```
