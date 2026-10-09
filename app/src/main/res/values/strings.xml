@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">下载</string>
+    <string name="tab_download">下载</string>
+    <string name="tab_files">已完成</string>
+    <string name="hint_url">粘贴下载链接</string>
+    <string name="action_download">下载</string>
+    <string name="status_idle">暂无任务，粘贴链接即可开始下载</string>
+    <string name="hint_protocols">支持 HTTP / HTTPS、BitTorrent 种子、磁力链接、ed2k 电驴链接，文件默认保存到 /storage/emulated/0/Download</string>
+    <string name="empty_files">还没有下载完成的文件</string>
+</resources>

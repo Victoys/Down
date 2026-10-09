@@ -1,0 +1,3 @@
+-keep class libgopeed.** { *; }
+-keep class go.** { *; }
+-dontwarn okhttp3.**
