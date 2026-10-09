@@ -81,3 +81,17 @@ Android 侧通过本地 HTTP 调 `/api/v1/tasks` 等接口创建和查询任务�
 
 因此没有使用 `android-actions/setup-android`，那个 action 会自己调一次
 `sdkmanager --licenses`，在部分镜像上会卡住。
+
+## 构建报 `gomobile: missing golang.org/x/mobile dependency`？
+
+gomobile 从某个版本起要求**被打包的模块自己显式依赖** `golang.org/x/mobile`，
+只在本机 `go install` 装了 gomobile 不够。修复方式是加一条 tool 指令：
+
+```bash
+cd core
+go mod tidy
+go get -tool golang.org/x/mobile/cmd/gobind
+go mod tidy
+```
+
+本仓库的 workflow 已经包含这两步。若你本地构建，手动执行上面命令即可。

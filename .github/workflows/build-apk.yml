@@ -84,11 +84,18 @@ jobs:
 
       - name: Resolve Go dependencies
         working-directory: core
-        run: go mod tidy
+        run: |
+          set -e
+          go mod tidy
+          # gomobile bind 要求当前模块显式依赖 golang.org/x/mobile。
+          # -tool 会写入 go.mod 的 tool 指令，后续 go mod tidy 也会保留该依赖。
+          go get -tool golang.org/x/mobile/cmd/gobind
+          go mod tidy
+          cat go.mod
 
       - name: Build Go core AAR
         working-directory: core
-        run: gomobile bind -target=android -androidapi 24 -o ../app/libs/gopeed-core.aar .
+        run: gomobile bind -target=android -androidapi 24 -o ../app/libs/gopeed-core.aar . -v
 
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon --stacktrace
