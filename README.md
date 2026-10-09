@@ -104,3 +104,23 @@ go mod tidy
 ```bash
 gomobile bind -target=android -androidapi 24 -o ../app/libs/gopeed-core.aar .
 ```
+
+## 报 `unknown field ApiEnable in struct literal of type model.StartConfig`？
+
+原因：`go mod tidy` 默认挑 gopeed 的**最新 tag**（如 v1.9.x），
+而那一版的 `pkg/rest/model.StartConfig` 字段和 main 分支不一样，
+结构体字面量里写 `ApiEnable` 就编译不过。
+
+两个改动一起解决：
+
+1. **锁版本**：workflow 里 `go get github.com/GopeedLab/gopeed@main`，
+   强制用 main 分支（本项目代码就是按 main 写的）。
+2. **改用 JSON 构造配置**：`core/mobile.go` 不再写结构体字面量，
+   而是 `json.Marshal(map) → json.Unmarshal(&cfg)`。
+   gopeed 后续增删字段时，未知字段会被忽略，不会直接编译失败。
+
+另外 `Start()` 里加了保护：`rest.Start` 在 API 未启用时会返回端口 0 且不带错误，
+这里显式转成 error，避免上层拿着 0 端口去请求。
+
+> 注意 `NativeMode` 必须保持 false。开启时 gopeed 会用持久化配置覆盖 `apiEnable`，
+> REST 服务可能起不来。

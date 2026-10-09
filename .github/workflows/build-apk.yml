@@ -86,12 +86,19 @@ jobs:
         working-directory: core
         run: |
           set -e
+          # 关键：显式锁定 gopeed 到 main 分支。
+          # 不锁的话 go mod tidy 会挑最新的 tag（如 v1.9.x），
+          # 那一版的 model.StartConfig 字段与 main 不同，会编译失败。
+          go get github.com/GopeedLab/gopeed@main
           go mod tidy
           # gomobile bind 要求当前模块显式依赖 golang.org/x/mobile。
           # -tool 会写入 go.mod 的 tool 指令，后续 go mod tidy 也会保留该依赖。
           go get -tool golang.org/x/mobile/cmd/gobind
           go mod tidy
+          echo "---- go.mod ----"
           cat go.mod
+          echo "---- gopeed version ----"
+          go list -m github.com/GopeedLab/gopeed
 
       - name: Build Go core AAR
         working-directory: core
